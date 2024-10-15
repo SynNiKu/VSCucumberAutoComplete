@@ -17,6 +17,7 @@ import {
     getOSPath,
     getFileContent,
     clearComments,
+    clearPythonComments,
     getMD5Id,
     escapeRegExp,
     escaprRegExpForPureText,
@@ -527,7 +528,7 @@ export default class StepsHandler {
     getFileSteps(filePath: string) {
         const fileContent = getFileContent(filePath);
         const fileComments = this.getMultiLineComments(fileContent);
-        const definitionFile = clearComments(fileContent);
+        const definitionFile = filePath.endsWith('.py') ? clearPythonComments(fileContent) : clearComments(fileContent);
         return definitionFile
             .split(/\r?\n/g)
             .reduce((steps, line, lineIndex, lines) => {
@@ -559,9 +560,11 @@ export default class StepsHandler {
                         getOSPath(filePath),
                         Range.create(pos, pos)
                     );
-                    steps = steps.concat(
-                        this.getSteps(finalLine, stepPart, def, gherkin, fileComments)
-                    );
+                    if(stepPart != '') {
+                        steps = steps.concat(
+                            this.getSteps(finalLine, stepPart, def, gherkin, fileComments)
+                        );
+                    }
                 }
                 return steps;
             }, new Array<Step>());
