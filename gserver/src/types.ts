@@ -31,6 +31,7 @@ export interface BaseSettings {
     skipDocStringsFormat: boolean,
     smartSnippets: boolean,
     stepRegExSymbol?: string
+    stepParserFiles?: string | string[],
     steps: string | string[],
     stepsInvariants: boolean,
     strictGherkinCompletion: boolean,
@@ -48,6 +49,7 @@ export interface Settings {
     skipDocStringsFormat: boolean,
     smartSnippets: boolean,
     stepRegExSymbol?: string
+    stepParserFiles?: string | string[],
     steps: StepSettings,
     stepsInvariants: boolean,
     strictGherkinCompletion: boolean,

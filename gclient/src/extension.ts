@@ -1,7 +1,8 @@
 import * as path from 'path';
 
-import { workspace, window, ExtensionContext, Range, TextEditor } from 'vscode';
+import { workspace, window, languages, ExtensionContext, Range, TextEditor } from 'vscode';
 import { getExamplesHeaderLines } from './examplesHeaders';
+import { PythonStepTypeDefinitionProvider } from './pythonStepNavigation';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -18,6 +19,12 @@ interface ParameterGroup {
 }
 
 export function activate(context: ExtensionContext) {
+    const pythonStepTypes = new PythonStepTypeDefinitionProvider();
+    context.subscriptions.push(languages.registerDefinitionProvider(
+        { scheme: 'file', language: 'python' },
+        pythonStepTypes
+    ));
+    context.subscriptions.push(pythonStepTypes);
     // Node server module
     const serverModule = context.asAbsolutePath(
         path.join('gserver', 'out', 'server.js')

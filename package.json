@@ -27,6 +27,7 @@
     "autocomplete"
   ],
   "main": "./gclient/out/extension",
+  "activationEvents": ["onLanguage:python"],
   "icon": "img/icon.png",
   "contributes": {
     "semanticTokenTypes": [
@@ -108,6 +109,13 @@
           },
           "required": false,
           "default": []
+        },
+        "cucumberautocomplete.stepParserFiles": {
+          "description": "Workspace-relative glob or array of globs for Python files containing Behave register_type parser definitions. An empty array disables parser navigation.",
+          "type": ["array", "string"],
+          "items": { "type": "string", "minLength": 1 },
+          "scope": "resource",
+          "default": ["**/*.py"]
         },
         "cucumberautocomplete.pages": {
           "description": "Object, which consists of 'page name' => 'page object file path' pairs",

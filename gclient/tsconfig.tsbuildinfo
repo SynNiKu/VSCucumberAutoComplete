@@ -1,1 +1,1 @@
-{"root":["./src/examplesheaders.ts","./src/extension.ts"],"version":"6.0.3"}
+{"root":["./src/examplesheaders.ts","./src/extension.ts","./src/pythonstepnavigation.ts","./src/pythonsteptypes.ts"],"version":"6.0.3"}

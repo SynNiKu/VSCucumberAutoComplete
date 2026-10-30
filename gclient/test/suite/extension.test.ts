@@ -51,6 +51,74 @@ suite('Extension E2E', () => {
         assert.deepStrictEqual(Array.from(tokens.data), [2, 24, 6, 1, 0, 0, 11, 2, 0, 0]);
     });
 
+    test('navigates from a Python step type to its registered parser', async () => {
+        const folder = getWorkspaceFolder();
+        const uri = vscode.Uri.joinPath(folder.uri, 'steps', 'type-navigation.py');
+        const document = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(document);
+        const character = document.lineAt(0).text.indexOf('NoWhitespaceString') + 2;
+        const definitions = await waitFor(
+            'Python step type definition',
+            () => getDefinitions(document, new vscode.Position(0, character)),
+            (result) => result.some((definition) => isWorkspaceRelativePath(
+                definitionUri(definition), 'parsers', 'step_types.py'
+            ))
+        );
+        assert.ok(definitions.some((definition) => isWorkspaceRelativePath(
+            definitionUri(definition), 'parsers', 'step_types.py'
+        )));
+    });
+
+    test('limits Python parser navigation to configured paths', async () => {
+        const folder = getWorkspaceFolder();
+        const uri = vscode.Uri.joinPath(folder.uri, 'steps', 'type-navigation.py');
+        const document = await vscode.workspace.openTextDocument(uri);
+        await vscode.window.showTextDocument(document);
+        const position = new vscode.Position(0, document.lineAt(0).text.indexOf('NoWhitespaceString') + 2);
+        const configuration = vscode.workspace.getConfiguration('cucumberautocomplete', folder.uri);
+        const original = configuration.inspect<string | string[]>('stepParserFiles')?.workspaceValue;
+        const isParser = (definition: vscode.Location | vscode.LocationLink) => isWorkspaceRelativePath(
+            definitionUri(definition), 'parsers', 'step_types.py'
+        );
+        try {
+            await configuration.update('stepParserFiles', 'steps/**/*.py', vscode.ConfigurationTarget.Workspace);
+            assert.strictEqual((await getDefinitions(document, position)).some(isParser), false);
+
+            await configuration.update('stepParserFiles', ['steps/**/*.py', 'parsers/**/*.py'], vscode.ConfigurationTarget.Workspace);
+            const definitions = await waitFor('configured Python parser', () => getDefinitions(document, position),
+                (result) => result.some(isParser));
+            assert.ok(definitions.some(isParser));
+
+            await configuration.update('stepParserFiles', [], vscode.ConfigurationTarget.Workspace);
+            assert.strictEqual((await getDefinitions(document, position)).some(isParser), false);
+        } finally {
+            await configuration.update('stepParserFiles', original, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+
+    test('refreshes cached Python parser locations after a file changes', async () => {
+        const folder = getWorkspaceFolder();
+        const sourceUri = vscode.Uri.joinPath(folder.uri, 'steps', 'type-navigation.py');
+        const parserUri = vscode.Uri.joinPath(folder.uri, 'parsers', 'step_types.py');
+        const document = await vscode.workspace.openTextDocument(sourceUri);
+        await vscode.window.showTextDocument(document);
+        const position = new vscode.Position(0, document.lineAt(0).text.indexOf('NoWhitespaceString') + 2);
+        const original = await vscode.workspace.fs.readFile(parserUri);
+        const parserLine = (definition: vscode.Location | vscode.LocationLink) =>
+            definition instanceof vscode.Location ? definition.range.start.line : definition.targetRange.start.line;
+        const hasParserAtLine = (line: number) => (definitions: readonly (vscode.Location | vscode.LocationLink)[]) =>
+            definitions.some((definition) => isWorkspaceRelativePath(
+                definitionUri(definition), 'parsers', 'step_types.py'
+            ) && parserLine(definition) === line);
+        try {
+            await waitFor('initial Python parser', () => getDefinitions(document, position), hasParserAtLine(0));
+            await vscode.workspace.fs.writeFile(parserUri, Buffer.concat([Buffer.from('\n'), Buffer.from(original)]));
+            await waitFor('updated Python parser', () => getDefinitions(document, position), hasParserAtLine(1));
+        } finally {
+            await vscode.workspace.fs.writeFile(parserUri, original);
+        }
+    });
+
     test('completion and completion resolve', async () => {
         const document = await openFixture('completion.feature');
         const line = 2;

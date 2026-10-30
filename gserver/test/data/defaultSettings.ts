@@ -10,6 +10,7 @@ export const defaultSettings = {
   pureTextSteps: false,
   skipDocStringsFormat: false,
   smartSnippets: false,
+  stepParserFiles: ['**/*.py'],
   steps: new Array<string>(),
   stepsInvariants: false,
   strictGherkinCompletion: false,

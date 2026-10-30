@@ -45,6 +45,8 @@ Values and placeholders use separate semantic token types, so their colors follo
 
 The first table row after an English `Examples:` or `Scenarios:` heading is bold and underlined. Outline parameter matching currently substitutes rows from `Examples:` sections only. Custom parameter replacements that produce regex fragments without capture groups may not be highlighted.
 
+In Python step definitions, Go to Definition on a parameter type such as `{value:NoWhitespaceString}` navigates to the function or class registered with Behave's `register_type` in the same workspace folder. The registration and converter must be in the same Python file. Use `cucumberautocomplete.stepParserFiles` to limit the files searched. Results are cached until Python files or the search setting change.
+
 ## Settings:
 
 ### Basic settings example:
@@ -64,6 +66,8 @@ All the files, that match path provided, will be handled by the extension. So, i
 The Node will watch steps files for change and will automatically update steps in them.
 All the paths are relative to the app root.
 Empty or non-string values are ignored, so malformed workspace configuration does not crash the extension.
+
+**`cucumberautocomplete.stepParserFiles`** - Workspace-relative glob or array of globs for Python files containing Behave parser registrations. The default is `["**/*.py"]`. Set a narrower path such as `"stepparsers/*.py"` to reduce search time, or `[]` to disable parser navigation. Empty, non-string, absolute, and parent-directory paths are ignored. Generated environments and credential directories are excluded from the search.
 
 **`cucumberautocomplete.syncfeatures`** - Will get steps using count from the glob-style path.
 Same as for the `steps` setting - this path should be as strict as possible.
