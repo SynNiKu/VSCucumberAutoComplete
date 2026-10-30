@@ -117,6 +117,13 @@
           "scope": "resource",
           "default": ["**/*.py"]
         },
+        "cucumberautocomplete.fixtureFiles": {
+          "description": "Workspace-relative glob or array of globs for Python fixture definitions used by @fixture tags. An empty array disables fixture navigation.",
+          "type": ["array", "string"],
+          "items": { "type": "string", "minLength": 1 },
+          "scope": "resource",
+          "default": ["**/*.py"]
+        },
         "cucumberautocomplete.pages": {
           "description": "Object, which consists of 'page name' => 'page object file path' pairs",
           "type": "object",

@@ -4,6 +4,7 @@ import { CustomParameter, PagesSettings } from '../../src/types';
 // So, imitate this behaviour for the tests
 export const defaultSettings = {
   customParameters: new Array<CustomParameter>(),
+  fixtureFiles: ['**/*.py'],
   formatConfOverride: {},
   onTypeFormat: false,
   pages: {} as PagesSettings,

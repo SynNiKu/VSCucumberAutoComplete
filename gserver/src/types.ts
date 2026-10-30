@@ -22,6 +22,7 @@ export interface FormatConf {
 }
 
 export interface BaseSettings {
+    fixtureFiles?: string | string[],
     customParameters: CustomParameter[],
     formatConfOverride: FormatConf,
     gherkinDefinitionPart?: string,
@@ -40,6 +41,7 @@ export interface BaseSettings {
 }
 
 export interface Settings {
+    fixtureFiles?: string | string[],
     customParameters: CustomParameter[],
     formatConfOverride: FormatConf,
     gherkinDefinitionPart?: string,

@@ -61,7 +61,7 @@ export function getStepTypeAtPosition(text: string, position: SourcePosition): s
 }
 
 // Mask Python strings and comments while preserving offsets for navigation locations.
-function maskPythonText(text: string): string {
+export function maskPythonText(text: string): string {
     let result = '';
     let quote = '';
     let comment = false;

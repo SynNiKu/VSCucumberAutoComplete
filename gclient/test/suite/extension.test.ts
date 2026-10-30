@@ -119,6 +119,44 @@ suite('Extension E2E', () => {
         }
     });
 
+    test('navigates from a feature fixture tag and respects fixture search paths', async () => {
+        const document = await openFixture('fixture-navigation.feature');
+        const position = new vscode.Position(0, document.lineAt(0).text.indexOf('clear') + 1);
+        const configuration = vscode.workspace.getConfiguration('cucumberautocomplete', getWorkspaceFolder().uri);
+        const original = configuration.inspect<string | string[]>('fixtureFiles')?.workspaceValue;
+        const isFixture = (definition: vscode.Location | vscode.LocationLink) => isWorkspaceRelativePath(
+            definitionUri(definition), 'fixtures', 'fixtures.py'
+        );
+        try {
+            await configuration.update('fixtureFiles', 'fixtures/**/*.py', vscode.ConfigurationTarget.Workspace);
+            const definitions = await waitFor('Python fixture definition', () => getDefinitions(document, position),
+                (result) => result.some(isFixture));
+            const fixtureLink = definitions.find(isFixture);
+            assert.ok(fixtureLink && 'targetUri' in fixtureLink);
+            assert.ok(fixtureLink.originSelectionRange);
+            assert.strictEqual(document.getText(fixtureLink.originSelectionRange), '@fixture.setup.clear.all');
+
+            const cachedDefinitions = await getDefinitions(document, new vscode.Position(2, 3));
+            const cachedLink = cachedDefinitions.find(isFixture);
+            assert.ok(cachedLink && 'targetUri' in cachedLink);
+            assert.ok(cachedLink.originSelectionRange);
+            assert.strictEqual(cachedLink.originSelectionRange.start.line, 2);
+            assert.strictEqual(document.getText(cachedLink.originSelectionRange), '@fixture.setup.clear.all');
+
+            const numericPosition = new vscode.Position(0, document.lineAt(0).text.indexOf('5d'));
+            await waitFor('fixture with a numeric name segment', () => getDefinitions(document, numericPosition),
+                (result) => result.some((definition) => {
+                    const range = definition instanceof vscode.Location ? definition.range : definition.targetRange;
+                    return isFixture(definition) && range.start.line === 5;
+                }));
+
+            await configuration.update('fixtureFiles', [], vscode.ConfigurationTarget.Workspace);
+            assert.strictEqual((await getDefinitions(document, position)).some(isFixture), false);
+        } finally {
+            await configuration.update('fixtureFiles', original, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+
     test('completion and completion resolve', async () => {
         const document = await openFixture('completion.feature');
         const line = 2;

@@ -47,6 +47,8 @@ The first table row after an English `Examples:` or `Scenarios:` heading is bold
 
 In Python step definitions, Go to Definition on a parameter type such as `{value:NoWhitespaceString}` navigates to the function or class registered with Behave's `register_type` in the same workspace folder. The registration and converter must be in the same Python file. Use `cucumberautocomplete.stepParserFiles` to limit the files searched. Results are cached until Python files or the search setting change.
 
+In feature files, Go to Definition on a fixture tag such as `@fixture.setup.clear.all` navigates to the Python function or class decorated with `@fixture` and named `setup_clear_all`. Dots in the tag correspond to underscores in the Python name. Ctrl-hover highlights the entire tag, including the `@fixture.` prefix. Use `cucumberautocomplete.fixtureFiles` to limit the search; fixture locations use the same cache and refresh behavior as parser locations.
+
 ## Settings:
 
 ### Basic settings example:
@@ -68,6 +70,8 @@ All the paths are relative to the app root.
 Empty or non-string values are ignored, so malformed workspace configuration does not crash the extension.
 
 **`cucumberautocomplete.stepParserFiles`** - Workspace-relative glob or array of globs for Python files containing Behave parser registrations. The default is `["**/*.py"]`. Set a narrower path such as `"stepparsers/*.py"` to reduce search time, or `[]` to disable parser navigation. Empty, non-string, absolute, and parent-directory paths are ignored. Generated environments and credential directories are excluded from the search.
+
+**`cucumberautocomplete.fixtureFiles`** - Workspace-relative glob or array of globs for Python files containing fixture definitions. The default is `["**/*.py"]`. For example, use `["features/**/*.py", "dbehave/**/*.py"]`, or `[]` to disable fixture navigation. The same path validation and directory exclusions as `stepParserFiles` apply.
 
 **`cucumberautocomplete.syncfeatures`** - Will get steps using count from the glob-style path.
 Same as for the `steps` setting - this path should be as strict as possible.

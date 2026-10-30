@@ -316,6 +316,8 @@ connection.onDefinition(async (position: TextDocumentPositionParams) => {
     const textDocument = documents.get(position.textDocument.uri);
     const text = textDocument?.getText() || '';
     const line = text.split(/\r?\n/g)[position.position.line];
+    // Fixture tags are resolved by the client's Python definition provider.
+    if (/^\s*@/.test(line || '') && /(?:^|\s)@fixture\./.test(line)) return null;
     const char = position.position.character;
     const pos = position.position;
     const { uri } = position.textDocument;
