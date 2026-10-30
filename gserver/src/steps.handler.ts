@@ -563,8 +563,37 @@ export default class StepsHandler {
                     }
                 }
                 if (match) {
+                    //Python concatenates adjacent string literals in decorator arguments.
+                    if (filePath.endsWith('.py') && /^\s*@/.test(line)) {
+                        //Start after the first matched string, keeping the decorator for documentation.
+                        let remainder = finalLine.slice(match[0].length);
+                        let definitionLine = match[0];
+
+                        //The first match may have consumed either one or two source lines.
+                        let nextIndex = lineIndex + (currentMatch ? 1 : 2);
+                        while (true) {
+                            //Read past whitespace and Python comments to find the next literal.
+                            while (/^(?:\s|#[^\r\n]*)*$/.test(remainder) && nextIndex < lines.length) {
+                                remainder += '\n' + this.handleCustomParameters(lines[nextIndex++]);
+                            }
+
+                            //Match a quoted literal, including escaped characters and its matching closing quote.
+                            const continuation = remainder.match(/^(?:\s|#[^\r\n]*)*(['"])((?:\\.|(?!\1)[^\\\r\n])*)\1/);
+                            if (!continuation) {
+                                //A comma, closing parenthesis or malformed literal ends the step text.
+                                break;
+                            }
+                            
+                            //Append only the literal's contents to the step; retain its source for documentation.
+                            match[4] += continuation[2];
+                            definitionLine += continuation[0];
+                            remainder = remainder.slice(continuation[0].length);
+                            finalLine = definitionLine + remainder;
+                        }
+                    }
                     const [, beforeGherkin, gherkinString, , stepPart] = match;
                     const gherkin = getGherkinTypeLower(gherkinString);
+                    //Use the original decorator line even when its text continues on later lines.
                     const pos = Position.create(lineIndex, beforeGherkin.length);
                     const def = Location.create(
                         getOSPath(filePath),
