@@ -91,11 +91,25 @@ export function clearPythonComments(text: string): string {
         })
         .join('\r\n');
 
-    // Clear all line comments
+    // A number sign starts a comment only outside a quoted Python string.
     text = text
         .split(/\r?\n/g)
         .map(l => {
-            return l.replace(/#.*$/gm, '');
+            let quote = '';
+            for (let i = 0; i < l.length; i++) {
+                const character = l[i];
+                if (quote && character === '\\') {
+                    // Escaped quotes and backslashes do not end the string.
+                    i++;
+                } else if (quote && character === quote) {
+                    quote = '';
+                } else if (!quote && (character === '"' || character === "'")) {
+                    quote = character;
+                } else if (!quote && character === '#') {
+                    return l.slice(0, i);
+                }
+            }
+            return l;
         })
         .join('\r\n');
 
