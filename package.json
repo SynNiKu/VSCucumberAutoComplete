@@ -29,6 +29,27 @@
   "main": "./gclient/out/extension",
   "icon": "img/icon.png",
   "contributes": {
+    "semanticTokenTypes": [
+      {
+        "id": "gherkinParameterValue",
+        "superType": "function",
+        "description": "Step parameter value"
+      },
+      {
+        "id": "gherkinOutlineParameter",
+        "superType": "variable",
+        "description": "Scenario Outline placeholder"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "feature",
+        "scopes": {
+          "gherkinParameterValue": ["function"],
+          "gherkinOutlineParameter": ["variable.other"]
+        }
+      }
+    ],
     "languages": [
       {
         "id": "feature",

@@ -72,6 +72,8 @@ describe('Python adjacent step literals', () => {
     ['@step("first "\n\n# a comment\n\'second \'\n"third")', 'first second third'],
     ['@step("first " # inline comment\n"second")', 'first second'],
     ['@step("first # "\n"second")', 'first # second'],
+    ["@step('first # '\n'second') # comment", 'first # second'],
+    [String.raw`@step("first \"#\" "` + '\n"second") # comment', 'first "#" second'],
     [String.raw`@step("say \"hello\" " 'to the output')`, 'say "hello" to the output'],
   ])('concatenates adjacent literals in %s', (source, text) => {
     expect(parseSteps(source).elements.map((step) => step.text)).toEqual([text]);

@@ -3,6 +3,7 @@ import { pathToFileURL } from 'node:url';
 import {
   clearComments,
   clearGherkinComments,
+  clearPythonComments,
   escapeRegExp,
   escaprRegExpForPureText,
   getFileContent,
@@ -33,6 +34,21 @@ describe('file utilities', () => {
 });
 
 describe('text utilities', () => {
+  it.each([
+    ['@step("first # value") # comment', '@step("first # value") '],
+    ["@step('first # value') # comment", "@step('first # value') "],
+    [String.raw`@step("quoted \"#\" value") # comment`, String.raw`@step("quoted \"#\" value") `],
+    [String.raw`@step("escaped \\") # comment`, String.raw`@step("escaped \\") `],
+    ['# full-line comment', ''],
+    ['@step("unfinished # value', '@step("unfinished # value'],
+  ])('preserves hashes in Python strings and removes comments in %s', (input, expected) => {
+    expect(clearPythonComments(input)).toBe(expected);
+  });
+
+  it.each(['\n', '\r\n'])('preserves Python line positions with %j line endings', (newline) => {
+    const input = ['@step("first # "', '# comment', '"second") # trailing'].join(newline);
+    expect(clearPythonComments(input).split(/\r?\n/)).toEqual(['@step("first # "', '', '"second") ']);
+  });
   it.each(["'''", '"""'])(
     'removes %s doc-string content and regular comments',
     (delimiter) => {

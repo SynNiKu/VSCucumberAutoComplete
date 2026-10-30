@@ -20,6 +20,7 @@ import {
     TextDocumentSyncKind,
     DocumentDiagnosticReportKind,
     DocumentDiagnosticReport,
+    SemanticTokensBuilder,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
@@ -29,6 +30,7 @@ import PagesHandler from './pages.handler';
 import { normalizeSettings } from './settings';
 import { getOSPath, clearGherkinComments } from './util';
 import { Settings } from './types';
+import { getParameterRanges, ParameterGroup } from './parameter.tokens';
 
 // Create a connection for the server, using Node's IPC as a transport.
 // Also include all preview / proposed LSP features.
@@ -39,6 +41,7 @@ const documents: TextDocuments<TextDocument> = new TextDocuments(TextDocument);
 
 let hasConfigurationCapability = false;
 let hasWorkspaceFolderCapability = false;
+let hasSemanticRefreshCapability = false;
 
 //Path to the root of our workspace
 let workspaceRoot: string;
@@ -61,6 +64,7 @@ connection.onInitialize((params: InitializeParams) => {
     hasWorkspaceFolderCapability = !!(
         capabilities.workspace && !!capabilities.workspace.workspaceFolders
     );
+    hasSemanticRefreshCapability = !!capabilities.workspace?.semanticTokens?.refreshSupport;
 
     const result: InitializeResult = {
         capabilities: {
@@ -75,6 +79,10 @@ connection.onInitialize((params: InitializeParams) => {
                 workspaceDiagnostics: false
             },
             definitionProvider: true,
+            semanticTokensProvider: {
+                legend: { tokenTypes: ['gherkinParameterValue', 'gherkinOutlineParameter'], tokenModifiers: [] },
+                full: true,
+            },
             documentFormattingProvider: true,
             documentRangeFormattingProvider: true,
             documentOnTypeFormattingProvider: {
@@ -140,6 +148,14 @@ async function revalidateAllDocuments() {
     connection.languages.diagnostics.refresh();
 }
 
+function refreshParameterHighlighting() {
+    // Semantic tokens color each part; the custom notification refreshes whole-group italics.
+    if (hasSemanticRefreshCapability) {
+        connection.languages.semanticTokens.refresh();
+    }
+    connection.sendNotification('cucumberautocomplete/parameterGroupsChanged');
+}
+
 function watchStepsFiles(settings: Settings) {    
     settings.steps.forEach((path) => {
         glob
@@ -150,6 +166,7 @@ function watchStepsFiles(settings: Settings) {
                     const settings = await getSettings();
                     populateHandlers(settings);
                     revalidateAllDocuments();
+                    refreshParameterHighlighting();
                 });
             });
     });
@@ -183,6 +200,28 @@ connection.onDidChangeConfiguration(async (change) => {
     // TODO - should we check that our settings were changed before do this?
     initStepsAndPagesSetup(settings);
     revalidateAllDocuments();
+    refreshParameterHighlighting();
+});
+
+connection.onRequest('cucumberautocomplete/parameterGroups', async (params: { text: string }) => {
+    const settings = await getSettings();
+    const groups: ParameterGroup[] = [];
+    if (typeof params?.text === 'string' && shouldHandleSteps(settings) && stepsHandler) {
+        getParameterRanges(stepsHandler, params.text, groups);
+    }
+    return groups;
+});
+
+connection.languages.semanticTokens.on(async (params) => {
+    const builder = new SemanticTokensBuilder();
+    const document = documents.get(params.textDocument.uri);
+    const settings = await getSettings();
+    if (document && shouldHandleSteps(settings) && stepsHandler) {
+        getParameterRanges(stepsHandler, document.getText()).forEach((range) => {
+            builder.push(range.line, range.start, range.end - range.start, range.type === 'parameter' ? 0 : 1, 0);
+        });
+    }
+    return builder.build();
 });
 
 function initHandlers(settings: Settings) {
@@ -206,6 +245,7 @@ function populateHandlers(settings: Settings) {
 documents.onDidOpen(async () => {
     const settings = await getSettings(true);
     initStepsAndPagesSetup(settings);
+    connection.sendNotification('cucumberautocomplete/parameterGroupsChanged');
 });
 
 connection.onCompletion(

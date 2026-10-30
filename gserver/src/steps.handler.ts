@@ -44,6 +44,7 @@ export type Step = {
   count: number;
   gherkin: GherkinType;
   documentation: string;
+  parameterSource?: string;
 };
 
 export type StepsCountHash = {
@@ -508,6 +509,7 @@ export default class StepsHandler {
                     count,
                     gherkin,
                     documentation,
+                    parameterSource: step,
                 };
             });
     }

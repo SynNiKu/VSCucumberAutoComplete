@@ -28,6 +28,23 @@ VS Code Cucumber (Gherkin) Language Support + Format + Steps/PageObjects Autocom
 5. Reload the app to apply all extension changes
 6. To get autocomplete working, `strings` var of `editor.quickSuggestions` setting should be set to true (because by default `string` suggestions will not appear)
 
+## Step parameter highlighting
+
+With `cucumberautocomplete.steps` configured and semantic highlighting enabled, the extension identifies parameter values from matching step definitions. Matched parameters are displayed in italic, including any embedded Scenario Outline placeholders. For example, the definition `Given('I have {int} cucumbers', ...)` highlights `5` in `Given I have 5 cucumbers` and `<count>` in `Given I have <count> cucumbers` when the outline has a matching example row.
+
+Values and placeholders use separate semantic token types, so their colors follow the active theme and can be customized independently. For example, add the following to VS Code's `settings.json` to choose your own colors:
+
+```json
+"editor.semanticTokenColorCustomizations": {
+    "rules": {
+        "gherkinParameterValue:feature": "#d7ba7d",
+        "gherkinOutlineParameter:feature": "#9cdcfe"
+    }
+}
+```
+
+The first table row after an English `Examples:` or `Scenarios:` heading is bold and underlined. Outline parameter matching currently substitutes rows from `Examples:` sections only. Custom parameter replacements that produce regex fragments without capture groups may not be highlighted.
+
 ## Settings:
 
 ### Basic settings example:

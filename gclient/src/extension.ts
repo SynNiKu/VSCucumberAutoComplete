@@ -1,6 +1,7 @@
 import * as path from 'path';
 
-import { workspace, ExtensionContext } from 'vscode';
+import { workspace, window, ExtensionContext, Range, TextEditor } from 'vscode';
+import { getExamplesHeaderLines } from './examplesHeaders';
 import {
     LanguageClient,
     LanguageClientOptions,
@@ -9,6 +10,12 @@ import {
 } from 'vscode-languageclient/node';
 
 let client: LanguageClient;
+
+interface ParameterGroup {
+    line: number;
+    start: number;
+    end: number;
+}
 
 export function activate(context: ExtensionContext) {
     // Node server module
@@ -44,8 +51,71 @@ export function activate(context: ExtensionContext) {
         clientOptions
     );
 
-    // Start the client. This will also launch the server
-    client.start();
+    const parameterDecoration = window.createTextEditorDecorationType({
+        fontStyle: 'italic',
+        fontWeight: 'normal',
+    });
+    const examplesHeaderDecoration = window.createTextEditorDecorationType({
+        fontWeight: 'bold',
+        textDecoration: 'underline',
+    });
+    context.subscriptions.push(parameterDecoration, examplesHeaderDecoration);
+
+    // The server returns whole parameter groups so italics span embedded placeholders.
+    // Discard replies for older edits or requests that completed out of order.
+    const versions = new WeakMap<TextEditor, number>();
+    let ready = false;
+    const updateEditor = async (editor: TextEditor) => {
+        const sequence = (versions.get(editor) || 0) + 1;
+        versions.set(editor, sequence);
+        const document = editor.document;
+        const isFeatureFile = document.languageId === 'feature' && document.uri.scheme === 'file';
+        const headerRanges = isFeatureFile
+            ? getExamplesHeaderLines(document.getText()).map((line) => {
+                const text = document.lineAt(line).text;
+                return new Range(line, text.indexOf('|'), line, text.length);
+            })
+            : [];
+        editor.setDecorations(examplesHeaderDecoration, headerRanges);
+        if (!ready || !isFeatureFile ||
+            workspace.getConfiguration('editor', document.uri).get('semanticHighlighting.enabled') === false) {
+            editor.setDecorations(parameterDecoration, []);
+            return;
+        }
+        const version = document.version;
+        try {
+            const groups = await client.sendRequest<ParameterGroup[]>('cucumberautocomplete/parameterGroups', {
+                text: document.getText(),
+            });
+            if (
+                versions.get(editor) !== sequence ||
+                document.version !== version ||
+                !window.visibleTextEditors.includes(editor)
+            ) {
+                return;
+            }
+            editor.setDecorations(parameterDecoration, groups.map((group) =>
+                new Range(group.line, group.start, group.line, group.end)
+            ));
+        } catch {
+            if (versions.get(editor) === sequence) editor.setDecorations(parameterDecoration, []);
+        }
+    };
+    const updateVisibleEditors = () => window.visibleTextEditors.forEach((editor) => { void updateEditor(editor); });
+    context.subscriptions.push(
+        window.onDidChangeVisibleTextEditors(updateVisibleEditors),
+        workspace.onDidChangeTextDocument((event) => {
+            window.visibleTextEditors.filter((editor) => editor.document === event.document)
+                .forEach((editor) => { void updateEditor(editor); });
+        }),
+        workspace.onDidChangeConfiguration(updateVisibleEditors),
+    );
+    // Starting the client also launches the server.
+    client.start().then(() => {
+        ready = true;
+        context.subscriptions.push(client.onNotification('cucumberautocomplete/parameterGroupsChanged', updateVisibleEditors));
+        updateVisibleEditors();
+    });
 }
 
 export function deactivate(): Thenable<void> | undefined {

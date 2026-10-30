@@ -25,6 +25,32 @@ suite('Extension E2E', () => {
         );
     });
 
+    test('provides semantic tokens for step parameters', async () => {
+        const document = await openFixture('parameter-highlighting.feature');
+        const tokens = await waitFor(
+            'step parameter semantic tokens',
+            () => vscode.commands.executeCommand<vscode.SemanticTokens>(
+                'vscode.provideDocumentSemanticTokens', document.uri
+            ),
+            (result) => Boolean(result && result.data.length >= 10)
+        );
+        assert.ok(tokens);
+        assert.deepStrictEqual(Array.from(tokens.data), [2, 24, 6, 0, 0, 0, 11, 2, 0, 0]);
+    });
+
+    test('distinguishes outline placeholders from step parameter values', async () => {
+        const document = await openFixture('outline-highlighting.feature');
+        const tokens = await waitFor(
+            'outline placeholder semantic tokens',
+            () => vscode.commands.executeCommand<vscode.SemanticTokens>(
+                'vscode.provideDocumentSemanticTokens', document.uri
+            ),
+            (result) => Boolean(result && result.data.length >= 10)
+        );
+        assert.ok(tokens);
+        assert.deepStrictEqual(Array.from(tokens.data), [2, 24, 6, 1, 0, 0, 11, 2, 0, 0]);
+    });
+
     test('completion and completion resolve', async () => {
         const document = await openFixture('completion.feature');
         const line = 2;
