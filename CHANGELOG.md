@@ -1,3 +1,12 @@
+## 4.0.0
+
+* Use `cucumberautocomplete.featureFiles` to select feature files for usage counts and reference searches.
+* Navigate from feature-file fixture tags to Python fixture definitions, with configurable search paths.
+* Navigate from a Python step parameter type to its registered Behave parser, with configurable parser-file search paths.
+* Highlight matched step parameters and Scenario Outline placeholders with separate theme colors.
+* Italicize complete parameter values and emphasize English Examples table headers.
+* Preserve `#` characters inside quoted Python step definitions when removing comments.
+
 ## 3.1.1
 
 * Extension fixes:

@@ -1,18 +1,18 @@
 {
   "name": "cucumberautocomplete",
-  "version": "3.1.1",
-  "publisher": "alexkrechik",
-  "author": "Alexander Krechik",
+  "version": "4.0.0",
+  "publisher": "synergetik",
+  "author": "Synergetik",
   "license": "MIT",
-  "displayName": "Cucumber (Gherkin) Full Support",
+  "displayName": "SynGherkin",
   "description": "VSCode Cucumber (Gherkin) Full Language Support + Formatting + Autocomplete",
-  "homepage": "https://github.com/alexkrechik/VSCucumberAutoComplete",
+  "homepage": "https://github.com/Synergetik/VSCucumberAutoComplete",
   "engines": {
     "vscode": "^1.75.0"
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/alexkrechik/VSCucumberAutoComplete"
+    "url": "https://github.com/Synergetik/VSCucumberAutoComplete"
   },
   "bugs": {
     "url": "https://github.com/alexkrechik/VSCucumberAutoComplete/issues"
