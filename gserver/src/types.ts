@@ -37,7 +37,7 @@ export interface BaseSettings {
     stepsInvariants: boolean,
     strictGherkinCompletion: boolean,
     strictGherkinValidation: boolean,
-    syncfeatures: boolean | string,
+    featureFiles: string,
 }
 
 export interface Settings {
@@ -56,5 +56,5 @@ export interface Settings {
     stepsInvariants: boolean,
     strictGherkinCompletion: boolean,
     strictGherkinValidation: boolean,
-    syncfeatures: boolean | string,
+    featureFiles: string,
 }

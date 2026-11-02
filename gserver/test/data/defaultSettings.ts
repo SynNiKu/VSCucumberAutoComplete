@@ -16,5 +16,5 @@ export const defaultSettings = {
   stepsInvariants: false,
   strictGherkinCompletion: false,
   strictGherkinValidation: false,
-  syncfeatures: 'test/features/*.feature',
+  featureFiles: 'test/features/*.feature',
 }

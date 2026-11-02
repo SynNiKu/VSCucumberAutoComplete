@@ -49,6 +49,10 @@ In Python step definitions, Go to Definition on a parameter type such as `{value
 
 In feature files, Go to Definition on a fixture tag such as `@fixture.setup.clear.all` navigates to the Python function or class decorated with `@fixture` and named `setup_clear_all`. Dots in the tag correspond to underscores in the Python name. Ctrl-hover highlights the entire tag, including the `@fixture.` prefix. Use `cucumberautocomplete.fixtureFiles` to limit the search; fixture locations use the same cache and refresh behavior as parser locations.
 
+Use **Find All References** on a feature step or its step definition to find where the same definition is used in feature files. Configure `cucumberautocomplete.steps` to discover the definitions and `cucumberautocomplete.featureFiles` to select feature files to search. Open feature files are searched using their current contents. Scenario Outline matching follows the same rules as Go to Definition.
+
+In Python, hover over a configured `@given`, `@when`, `@then`, or `@step` decorator to see the number of references and open the references list. The standard **Find All References** command is also available on the decorator.
+
 ## Settings:
 
 ### Basic settings example:
@@ -73,8 +77,7 @@ Empty or non-string values are ignored, so malformed workspace configuration doe
 
 **`cucumberautocomplete.fixtureFiles`** - Workspace-relative glob or array of globs for Python files containing fixture definitions. The default is `["**/*.py"]`. For example, use `["features/**/*.py", "dbehave/**/*.py"]`, or `[]` to disable fixture navigation. The same path validation and directory exclusions as `stepParserFiles` apply.
 
-**`cucumberautocomplete.syncfeatures`** - Will get steps using count from the glob-style path.
-Same as for the `steps` setting - this path should be as strict as possible.
+**`cucumberautocomplete.featureFiles`** - Workspace-relative feature file glob used for completion usage counts and Find All References. For example, use `"features/**/*.feature"` to search the `features` directory, or `"**/*.feature"` to search the whole workspace. The default is `"features/**/*.feature"`; an empty string disables both usage counts and reference searching. Only `.feature` and `.testcase` files are read for references. Malformed, absolute, and parent-directory paths are ignored by the reference search.
 
 **`cucumberautocomplete.strictGherkinCompletion`** - Strict comparing of declaration function and gherkin word.
 For ex. if step definition is `When(/I do something/)` - in case of `strictGherkinCompletion` is `true` - after typing `Given I` this step will not be shown in the suggestion list.
@@ -164,7 +167,7 @@ By default, all the `' ' "` symbols will be used to define the start and the end
         "test/features/step_definitions/*.js",
         "node_modules/qa-lib/src/step_definitions/*.js"
     ],
-    "cucumberautocomplete.syncfeatures": "test/features/*feature",
+    "cucumberautocomplete.featureFiles": "features/**/*feature",
     "cucumberautocomplete.strictGherkinCompletion": true,
     "cucumberautocomplete.strictGherkinValidation": true,
     "cucumberautocomplete.smartSnippets": true,

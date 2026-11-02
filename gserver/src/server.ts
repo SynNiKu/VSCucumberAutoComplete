@@ -1,5 +1,7 @@
 import * as glob from 'glob';
 import * as fs from 'fs';
+import * as path from 'path';
+import { fileURLToPath } from 'url';
 
 import {
     createConnection,
@@ -21,13 +23,14 @@ import {
     DocumentDiagnosticReportKind,
     DocumentDiagnosticReport,
     SemanticTokensBuilder,
+    ReferenceParams,
 } from 'vscode-languageserver/node';
 import { TextDocument } from 'vscode-languageserver-textdocument';
 
 import { format, clearText, getIndent } from './format';
 import StepsHandler from './steps.handler';
 import PagesHandler from './pages.handler';
-import { normalizeSettings } from './settings';
+import { getReferenceFilePatterns, normalizeSettings } from './settings';
 import { getOSPath, clearGherkinComments } from './util';
 import { Settings } from './types';
 import { getParameterRanges, ParameterGroup } from './parameter.tokens';
@@ -79,6 +82,7 @@ connection.onInitialize((params: InitializeParams) => {
                 workspaceDiagnostics: false
             },
             definitionProvider: true,
+            referencesProvider: true,
             semanticTokensProvider: {
                 legend: { tokenTypes: ['gherkinParameterValue', 'gherkinOutlineParameter'], tokenModifiers: [] },
                 full: true,
@@ -329,6 +333,87 @@ connection.onDefinition(async (position: TextDocumentPositionParams) => {
     }
     return Location.create(uri, Range.create(pos, pos));
 });
+
+function sameFile(first: string, second: string): boolean {
+    try {
+        const firstPath = path.normalize(fileURLToPath(first));
+        const secondPath = path.normalize(fileURLToPath(second));
+        return process.platform === 'win32'
+            ? firstPath.toLowerCase() === secondPath.toLowerCase()
+            : firstPath === secondPath;
+    } catch {
+        return first === second;
+    }
+}
+
+async function findStepReferences(params: ReferenceParams): Promise<Location[]> {
+    const settings = await getSettings();
+    if (!shouldHandleSteps(settings)) return [];
+    if (!stepsHandler) initHandlers(settings);
+    if (!stepsHandler) return [];
+
+    const { uri } = params.textDocument;
+    const document = documents.get(uri);
+    const selected = document
+        ? stepsHandler.getDocumentSteps(uri, document.getText())
+            .filter((entry) => entry.location.range.start.line === params.position.line)
+            .map((entry) => entry.step)
+        : stepsHandler.getElements().filter((step) => {
+            const definition = step.def as Location;
+            return sameFile(definition.uri, uri) && definition.range.start.line === params.position.line;
+        });
+    if (!selected.length) return [];
+    // Variants of one definition can have different completion IDs, but are the same step.
+    const definitions = selected.map((step) => step.def as Location);
+    const files = new Set<string>();
+    for (const pattern of getReferenceFilePatterns(settings.featureFiles)) {
+        try {
+            glob.sync(workspaceRoot + '/' + pattern, { absolute: true, nodir: true })
+                .forEach((file) => files.add(file));
+        } catch {
+            // Ignore malformed patterns.
+        }
+    }
+    const references: Location[] = [];
+    for (const file of files) {
+        if (!/\.(?:feature|testcase)$/i.test(file) || /(?:^|[\\/])(?:credentials|secrets)(?:[\\/]|$)/i.test(file)) {
+            continue;
+        }
+        const fileUri = getOSPath(file);
+        const openDocument = documents.all().find((item) => sameFile(item.uri, fileUri));
+        const featureUri = openDocument?.uri ?? fileUri;
+        let text: string;
+        try {
+            text = openDocument?.getText() ?? fs.readFileSync(file, 'utf8');
+        } catch {
+            continue;
+        }
+        stepsHandler.getDocumentSteps(featureUri, text).forEach((entry) => {
+            const definition = entry.step.def as Location;
+            if (definitions.some((candidate) => sameFile(candidate.uri, definition.uri) &&
+                candidate.range.start.line === definition.range.start.line &&
+                candidate.range.start.character === definition.range.start.character)) {
+                references.push(entry.location);
+            }
+        });
+    }
+    if (params.context.includeDeclaration) {
+        const seen = new Set<string>();
+        selected.forEach((step) => {
+            const definition = step.def as Location;
+            const key = `${definition.uri}:${definition.range.start.line}:${definition.range.start.character}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                references.push(definition);
+            }
+        });
+    }
+    return references;
+}
+
+connection.onReferences(findStepReferences);
+// Step definition documents are handled by the client and are not synchronized with this server.
+connection.onRequest('cucumberautocomplete/stepReferences', findStepReferences);
 
 connection.onDocumentFormatting(
     async (params: DocumentFormattingParams) => {

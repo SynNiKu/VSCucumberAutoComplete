@@ -38,6 +38,96 @@ suite('Extension E2E', () => {
         assert.deepStrictEqual(Array.from(tokens.data), [2, 24, 6, 0, 0, 0, 11, 2, 0, 0]);
     });
 
+    test('finds step references from feature and definition files', async () => {
+        const feature = await openFixture('reference-parameters.feature');
+        const folder = getWorkspaceFolder();
+        const definition = await vscode.workspace.openTextDocument(
+            vscode.Uri.joinPath(folder.uri, 'steps', 'parameter-highlighting.js')
+        );
+        const getReferences = (document: vscode.TextDocument, position: vscode.Position) =>
+            vscode.commands.executeCommand<vscode.Location[]>(
+                'vscode.executeReferenceProvider', document.uri, position
+            );
+        const hasFeatureReference = (locations: vscode.Location[] | undefined) => Boolean(locations?.some(
+            (location) => isWorkspaceRelativePath(location.uri, 'features', 'parameter-highlighting.feature') &&
+                location.range.start.line === 2
+        ));
+        const featureReferences = await waitFor('feature references',
+            () => getReferences(feature, new vscode.Position(2, 15)), hasFeatureReference);
+        assert.ok(hasFeatureReference(featureReferences));
+        const definitionReferences = await waitFor('definition references',
+            () => getReferences(definition, new vscode.Position(0, 10)), hasFeatureReference);
+        assert.ok(hasFeatureReference(definitionReferences));
+        for (const references of [featureReferences, definitionReferences]) {
+            const lines = references.filter((location) => isWorkspaceRelativePath(
+                location.uri, 'features', 'reference-parameters.feature'
+            )).map((location) => location.range.start.line);
+            assert.deepStrictEqual(lines.sort(), [2, 3]);
+        }
+    });
+
+    test('shows references on a Python step decorator', async () => {
+        const folder = getWorkspaceFolder();
+        const configuration = vscode.workspace.getConfiguration('cucumberautocomplete', folder.uri);
+        const original = configuration.inspect<string | string[]>('steps')?.workspaceValue;
+        const document = await vscode.workspace.openTextDocument(
+            vscode.Uri.joinPath(folder.uri, 'steps', 'type-navigation.py')
+        );
+        const position = new vscode.Position(0, 3);
+        try {
+            await configuration.update('steps', ['steps/**/*.js', 'steps/**/*.py'], vscode.ConfigurationTarget.Workspace);
+            const references = await waitFor('Python step references',
+                () => vscode.commands.executeCommand<vscode.Location[]>('vscode.executeReferenceProvider', document.uri, position),
+                (locations) => Boolean(locations?.filter((location) => isWorkspaceRelativePath(
+                    location.uri, 'features', 'python-step-references.feature'
+                )).length === 2));
+            assert.ok(references);
+            const hovers = await waitFor('Python step references hover',
+                () => vscode.commands.executeCommand<vscode.Hover[]>('vscode.executeHoverProvider', document.uri, position),
+                (result) => Boolean(result?.some((hover) => hover.contents.some((content) =>
+                    content instanceof vscode.MarkdownString && content.value.includes('Find all references (2)')
+                ))));
+            assert.ok(hovers);
+        } finally {
+            await configuration.update('steps', original, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+
+    test('limits reference searches to configured feature files', async () => {
+        const folder = getWorkspaceFolder();
+        const configuration = vscode.workspace.getConfiguration('cucumberautocomplete', folder.uri);
+        const original = configuration.inspect<string>('featureFiles')?.workspaceValue;
+        const document = await openFixture('reference-parameters.feature');
+        const references = () => vscode.commands.executeCommand<vscode.Location[]>(
+            'vscode.executeReferenceProvider', document.uri, new vscode.Position(2, 15)
+        );
+        const featureLocations = (locations: vscode.Location[]) => locations.filter((location) =>
+            location.uri.fsPath.endsWith('.feature'));
+        try {
+            await configuration.update('featureFiles', 'features/reference-parameters.feature', vscode.ConfigurationTarget.Workspace);
+            const restricted = await waitFor('restricted reference paths', references, (locations) =>
+                Boolean(locations && featureLocations(locations).length === 2 && featureLocations(locations).every((location) =>
+                    isWorkspaceRelativePath(location.uri, 'features', 'reference-parameters.feature'))));
+            assert.strictEqual(featureLocations(restricted).length, 2);
+
+            await configuration.update('featureFiles', 'features/*.feature', vscode.ConfigurationTarget.Workspace);
+            const expanded = await waitFor('expanded reference paths', references, (locations) =>
+                Boolean(locations?.some((location) => isWorkspaceRelativePath(
+                    location.uri, 'features', 'parameter-highlighting.feature'
+                ))));
+            assert.strictEqual(featureLocations(expanded).filter((location) => isWorkspaceRelativePath(
+                location.uri, 'features', 'reference-parameters.feature'
+            )).length, 2);
+
+            await configuration.update('featureFiles', '', vscode.ConfigurationTarget.Workspace);
+            const disabled = await waitFor('disabled reference search', references,
+                (locations) => Boolean(locations && featureLocations(locations).length === 0));
+            assert.strictEqual(featureLocations(disabled).length, 0);
+        } finally {
+            await configuration.update('featureFiles', original, vscode.ConfigurationTarget.Workspace);
+        }
+    });
+
     test('distinguishes outline placeholders from step parameter values', async () => {
         const document = await openFixture('outline-highlighting.feature');
         const tokens = await waitFor(

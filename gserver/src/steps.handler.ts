@@ -65,13 +65,11 @@ export default class StepsHandler {
     settings: Settings;
 
     constructor(root: string, settings: Settings) {
-        const { syncfeatures, steps } = settings;
+        const { featureFiles, steps } = settings;
         this.settings = settings;
         this.populate(root, steps);
-        if (syncfeatures === true) {
-            this.setElementsHash(`${root}/**/*.feature`);
-        } else if (typeof syncfeatures === 'string') {
-            this.setElementsHash(`${root}/${syncfeatures}`);
+        if (typeof featureFiles === 'string' && featureFiles.trim()) {
+            this.setElementsHash(`${root}/${featureFiles}`);
         }
     }
 
@@ -669,6 +667,34 @@ export default class StepsHandler {
         return matches.find(
             (s) => new RegExp(`^(?:${s.reg.source})$`, s.reg.flags).test(text)
         ) ?? matches[0];
+    }
+
+    // Keep original line positions while excluding doc strings from reference searches.
+    getDocumentSteps(uri: string, text: string): { step: Step; location: Location }[] {
+        const result: { step: Step; location: Location }[] = [];
+        let docString = '';
+        text.split(/\r?\n/).forEach((line, lineNumber) => {
+            const delimiter = line.match(/^\s*("""|'''|```)/);
+            if (delimiter) {
+                if (!docString && !line.slice(delimiter[0].length).includes(delimiter[1])) {
+                    docString = delimiter[1];
+                } else if (docString === delimiter[1]) {
+                    docString = '';
+                }
+                return;
+            }
+            if (docString) return;
+            const original = line.match(this.getGherkinRegEx());
+            const match = original && this.getGherkinMatch(line, text);
+            const step = match && this.getStepByText(match[4]);
+            if (!original || !step) return;
+            const start = original[1].length + original[2].length + original[3].length;
+            result.push({
+                step,
+                location: Location.create(uri, Range.create(lineNumber, start, lineNumber, line.length)),
+            });
+        });
+        return result;
     }
 
     validate(line: string, lineNum: number, text: string) {

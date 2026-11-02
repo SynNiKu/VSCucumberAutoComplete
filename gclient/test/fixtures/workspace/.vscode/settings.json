@@ -1,5 +1,5 @@
 {
   "cucumberautocomplete.steps": ["steps/**/*.js"],
-  "cucumberautocomplete.syncfeatures": false,
+  "cucumberautocomplete.featureFiles": "features/**/*.feature",
   "cucumberautocomplete.smartSnippets": true
 }

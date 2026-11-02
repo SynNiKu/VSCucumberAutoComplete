@@ -6,7 +6,7 @@ import { defaultSettings } from './data/defaultSettings';
 const settings = {
   ...defaultSettings,
   steps: ['/data/steps/cucumberExpressions.steps.js'],
-  syncfeatures: '/data/features/cucumberExpressions.feature',
+  featureFiles: '/data/features/cucumberExpressions.feature',
   smartSnippets: true,
   stepsInvariants: true,
   strictGherkinCompletion: true,

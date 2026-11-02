@@ -5,7 +5,7 @@ import { GherkinType } from '../src/gherkin';
 import { Location, Position, Range } from 'vscode-languageserver';
 
 function handlerFor(source: string, pureTextSteps = false) {
-  const handler = new StepsHandler(__dirname, { ...defaultSettings, steps: [], syncfeatures: false, pureTextSteps });
+  const handler = new StepsHandler(__dirname, { ...defaultSettings, steps: [], featureFiles: '', pureTextSteps });
   const position = Position.create(0, 0);
   handler.elements = handler.getSteps(source, source, Location.create('file:///step', Range.create(position, position)), GherkinType.Given, {});
   return handler;

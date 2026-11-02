@@ -1,6 +1,19 @@
-import { normalizeSettings } from '../src/settings';
+import { getReferenceFilePatterns, normalizeSettings } from '../src/settings';
 import { BaseSettings } from '../src/types';
 import { defaultSettings } from './data/defaultSettings';
+
+describe('getReferenceFilePatterns', () => {
+  it('accepts a path and normalizes separators', () => {
+    expect(getReferenceFilePatterns(' features\\**\\*.feature ')).toEqual(['features/**/*.feature']);
+  });
+
+  it('ignores malformed, absolute, and parent-directory paths', () => {
+    for (const value of [undefined, null, true, false, 42, [], '', ' ', '/absolute/*.feature', 'C:\\outside\\*.feature',
+      '../outside/*.feature', 'features/../outside/*.feature', '{../outside,features}/*.feature']) {
+      expect(getReferenceFilePatterns(value)).toEqual([]);
+    }
+  });
+});
 
 describe('normalizeSettings', () => {
   it('normalizes a single step path', () => {

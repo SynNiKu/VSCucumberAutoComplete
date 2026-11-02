@@ -7,7 +7,7 @@ import { Location } from 'vscode-languageserver';
 const settings = {
   ...defaultSettings,
   steps: ['/data/steps/test.steps*.js'],
-  syncfeatures: '/data/features/test.feature',
+  featureFiles: '/data/features/test.feature',
   smartSnippets: true,
   stepsInvariants: true,
   strictGherkinCompletion: true,
@@ -39,11 +39,62 @@ const stepsDefinitionNum = 7;
 
 const s = new StepsHandler(__dirname, settings);
 
+describe('getDocumentSteps', () => {
+  it('finds matching step locations without counting comments or doc strings', () => {
+    const text = [
+      'Feature: references',
+      '  Scenario: matching',
+      '    Given I do something',
+      '    # Given I do something',
+      '    """',
+      '    Given I do something',
+      '    """',
+      '    And I do something',
+      '    | Given I do something |',
+      '    Then an unknown step',
+    ].join('\r\n');
+    const result = s.getDocumentSteps('file:///references.feature', text);
+    expect(result.map((entry) => entry.location.range)).toEqual([
+      { start: { line: 2, character: 10 }, end: { line: 2, character: 24 } },
+      { start: { line: 7, character: 8 }, end: { line: 7, character: 22 } },
+    ]);
+    expect(result[0].step.id).toBe(result[1].step.id);
+  });
+
+  it('handles empty and single-line doc strings', () => {
+    expect(s.getDocumentSteps('file:///empty.feature', '')).toEqual([]);
+    const text = '""" Given I do something """\nGiven I do something';
+    expect(s.getDocumentSteps('file:///example.feature', text).map((entry) => entry.location.range.start.line))
+      .toEqual([1]);
+  });
+
+  it('matches different parameter values and alternative variants to their shared definition', () => {
+    const handler = new StepsHandler(__dirname, { ...settings, steps: [], featureFiles: '' });
+    const definition = Location.create('file:///steps.py', {
+      start: { line: 3, character: 0 }, end: { line: 3, character: 0 },
+    });
+    handler.elements = handler.getSteps('use (one|two) {word}', 'use (one|two) {word}', definition, GherkinType.Given, {});
+    const result = handler.getDocumentSteps('file:///references.feature', [
+      'Given use one first',
+      'And use two second',
+    ].join('\n'));
+    expect(result).toHaveLength(2);
+    expect(result[0].step.id).not.toBe(result[1].step.id);
+    expect(result.map((entry) => entry.step.def)).toEqual([definition, definition]);
+  });
+});
+
 describe('constructor', () => {
+  it('does not count feature usage for an empty path', () => {
+    const handler = new StepsHandler(__dirname, { ...settings, featureFiles: '  ' });
+    expect(handler.elemenstCountHash).toStrictEqual({});
+    expect(handler.getElements().every((step) => step.count === 0)).toBe(true);
+  });
+
   it('does not count feature usage when synchronization is disabled', () => {
     const handler = new StepsHandler(__dirname, {
       ...settings,
-      syncfeatures: false,
+      featureFiles: '',
     });
 
     expect(handler.elemenstCountHash).toStrictEqual({});
@@ -311,14 +362,14 @@ describe('constructor', () => {
     expect(e[3]).toHaveProperty('text', 'I say b');
   });
 
-  it('should count usage from the default recursive feature glob', () => {
-    const recursiveSyncHandler = new StepsHandler(__dirname, {
+  it('should count usage from a recursive feature glob', () => {
+    const recursiveHandler = new StepsHandler(__dirname, {
       ...settings,
-      syncfeatures: true,
+      featureFiles: '**/*.feature',
     });
 
     expect(
-      recursiveSyncHandler.getElements().some((step) => step.count > 0)
+      recursiveHandler.getElements().some((step) => step.count > 0)
     ).toStrictEqual(true);
   });
 });
@@ -530,7 +581,7 @@ describe('getDefinition', () => {
     const prefixHandler = new StepsHandler(__dirname, {
       ...defaultSettings,
       steps: ['/data/steps/overlapping.steps.js'],
-      syncfeatures: false,
+      featureFiles: '',
     });
     expect(prefixHandler.getElements()).toHaveLength(2);
     expect(

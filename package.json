@@ -27,7 +27,16 @@
     "autocomplete"
   ],
   "main": "./gclient/out/extension",
-  "activationEvents": ["onLanguage:python"],
+  "activationEvents": [
+    "onLanguage:python",
+    "onLanguage:javascript",
+    "onLanguage:javascriptreact",
+    "onLanguage:typescript",
+    "onLanguage:typescriptreact",
+    "onLanguage:java",
+    "onLanguage:kotlin",
+    "onLanguage:ruby"
+  ],
   "icon": "img/icon.png",
   "contributes": {
     "semanticTokenTypes": [
@@ -130,14 +139,11 @@
           "required": false,
           "default": {}
         },
-        "cucumberautocomplete.syncfeatures": {
-          "description": "Will get steps using count from glob-style path or from '**/*.feature' if true",
-          "type": [
-            "boolean",
-            "string"
-          ],
+        "cucumberautocomplete.featureFiles": {
+          "description": "Workspace-relative feature file glob used for step usage counts and Find All References. An empty string disables both.",
+          "type": "string",
           "required": false,
-          "default": "test/features/*.feature"
+          "default": "features/**/*.feature"
         },
         "cucumberautocomplete.strictGherkinCompletion": {
           "description": "Strict comparing of declaration func and gherkin word (ex. show only steps, declared via 'When()' func for the 'When ' string",

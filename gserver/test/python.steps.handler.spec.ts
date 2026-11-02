@@ -6,7 +6,7 @@ import { Location } from 'vscode-languageserver';
 function parseSteps(source: string, extension = 'py', settings = {}) {
   const handler = new StepsHandler(__dirname, {
     ...defaultSettings,
-    syncfeatures: false,
+    featureFiles: '',
     ...settings,
   });
   const read = jest.spyOn(util, 'getFileContent').mockReturnValueOnce(source);

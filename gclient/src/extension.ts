@@ -1,6 +1,6 @@
 import * as path from 'path';
 
-import { workspace, window, languages, ExtensionContext, Range, TextEditor } from 'vscode';
+import { workspace, window, languages, commands, CancellationToken, ExtensionContext, Hover, Location, MarkdownString, Position, Range, TextDocument, TextEditor, Uri } from 'vscode';
 import { getExamplesHeaderLines } from './examplesHeaders';
 import { PythonDefinitionProvider } from './pythonStepNavigation';
 import {
@@ -16,6 +16,11 @@ interface ParameterGroup {
     line: number;
     start: number;
     end: number;
+}
+
+interface ReferenceLocation {
+    uri: string;
+    range: { start: { line: number; character: number }; end: { line: number; character: number } };
 }
 
 export function activate(context: ExtensionContext) {
@@ -118,7 +123,60 @@ export function activate(context: ExtensionContext) {
         workspace.onDidChangeConfiguration(updateVisibleEditors),
     );
     // Starting the client also launches the server.
-    client.start().then(() => {
+    const clientReady = client.start();
+    const getStepReferences = async (document: TextDocument, position: Position, includeDeclaration: boolean, token?: CancellationToken) => {
+        await clientReady;
+        if (token?.isCancellationRequested) return [];
+        const locations = await client.sendRequest<ReferenceLocation[]>(
+            'cucumberautocomplete/stepReferences',
+            {
+                textDocument: { uri: document.uri.toString() },
+                position: { line: position.line, character: position.character },
+                context: { includeDeclaration },
+            }, token
+        );
+        return locations.map((location) => new Location(Uri.parse(location.uri), new Range(
+            location.range.start.line, location.range.start.character,
+            location.range.end.line, location.range.end.character
+        )));
+    };
+    context.subscriptions.push(languages.registerReferenceProvider({ scheme: 'file' }, {
+        async provideReferences(document, position, referenceContext, token) {
+            if (document.languageId === 'feature') return [];
+            try {
+                return await getStepReferences(document, position, referenceContext.includeDeclaration, token);
+            } catch {
+                return [];
+            }
+        },
+    }));
+    const showReferencesCommand = 'cucumberautocomplete.showStepReferences';
+    context.subscriptions.push(commands.registerCommand(showReferencesCommand, async (uri: string, line: number, character: number) => {
+        const document = await workspace.openTextDocument(Uri.parse(uri));
+        const position = new Position(line, character);
+        const references = await getStepReferences(document, position, false);
+        await commands.executeCommand('editor.action.showReferences', document.uri, position, references);
+    }));
+    context.subscriptions.push(languages.registerHoverProvider({ scheme: 'file', language: 'python' }, {
+        async provideHover(document, position, token) {
+            const line = document.lineAt(position.line).text;
+            const decorator = line.match(/^\s*@(?:given|when|then|step)\s*\(/i);
+            if (!decorator || position.character < line.indexOf('@')) return undefined;
+            try {
+                // Include the declaration to distinguish an unused step from an unindexed decorator.
+                const locations = await getStepReferences(document, position, true, token);
+                if (token.isCancellationRequested || !locations.length) return undefined;
+                const count = locations.filter((location) => location.uri.fsPath !== document.uri.fsPath).length;
+                const args = encodeURIComponent(JSON.stringify([document.uri.toString(), position.line, position.character]));
+                const markdown = new MarkdownString(`[Find all references (${count})](command:${showReferencesCommand}?${args})`);
+                markdown.isTrusted = { enabledCommands: [showReferencesCommand] };
+                return new Hover(markdown, new Range(position.line, line.indexOf('@'), position.line, line.length));
+            } catch {
+                return undefined;
+            }
+        },
+    }));
+    clientReady.then(() => {
         ready = true;
         context.subscriptions.push(client.onNotification('cucumberautocomplete/parameterGroupsChanged', updateVisibleEditors));
         updateVisibleEditors();
