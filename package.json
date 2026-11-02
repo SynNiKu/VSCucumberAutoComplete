@@ -55,8 +55,12 @@
       {
         "language": "feature",
         "scopes": {
-          "gherkinParameterValue": ["function"],
-          "gherkinOutlineParameter": ["variable.other"]
+          "gherkinParameterValue": [
+            "function"
+          ],
+          "gherkinOutlineParameter": [
+            "variable.other"
+          ]
         }
       }
     ],
@@ -121,17 +125,33 @@
         },
         "cucumberautocomplete.stepParserFiles": {
           "description": "Workspace-relative glob or array of globs for Python files containing Behave register_type parser definitions. An empty array disables parser navigation.",
-          "type": ["array", "string"],
-          "items": { "type": "string", "minLength": 1 },
+          "type": [
+            "array",
+            "string"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "scope": "resource",
-          "default": ["**/*.py"]
+          "default": [
+            "**/*.py"
+          ]
         },
         "cucumberautocomplete.fixtureFiles": {
           "description": "Workspace-relative glob or array of globs for Python fixture definitions used by @fixture tags. An empty array disables fixture navigation.",
-          "type": ["array", "string"],
-          "items": { "type": "string", "minLength": 1 },
+          "type": [
+            "array",
+            "string"
+          ],
+          "items": {
+            "type": "string",
+            "minLength": 1
+          },
           "scope": "resource",
-          "default": ["**/*.py"]
+          "default": [
+            "**/*.py"
+          ]
         },
         "cucumberautocomplete.pages": {
           "description": "Object, which consists of 'page name' => 'page object file path' pairs",
@@ -240,12 +260,12 @@
     "@typescript-eslint/parser": "8.69.0",
     "@vscode/test-cli": "0.0.15",
     "@vscode/test-electron": "^3.1.0",
-    "@vscode/vsce": "3.9.2",
+    "@vscode/vsce": "^4.1.0",
     "eslint": "10.10.0",
-    "jest": "30.5.1",
     "istanbul-lib-coverage": "^3.2.2",
     "istanbul-lib-report": "^3.0.1",
     "istanbul-reports": "^3.1.7",
+    "jest": "30.5.1",
     "ts-jest": "29.4.12",
     "typescript": "6.0.3"
   },

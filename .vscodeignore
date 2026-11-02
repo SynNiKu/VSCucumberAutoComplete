@@ -3,6 +3,9 @@
 .vscode-test/**
 coverage/**
 gclient/test/**
+**/test/**
+**/tests/**
+jest.config.js
 **/*.ts
 **/*.map
 .gitignore
