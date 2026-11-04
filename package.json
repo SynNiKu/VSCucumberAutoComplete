@@ -1,10 +1,10 @@
 {
-  "name": "cucumberautocomplete",
+  "name": "dbehave-ls",
   "version": "4.0.0",
   "publisher": "synergetik",
   "author": "Synergetik",
   "license": "MIT",
-  "displayName": "SynGherkin",
+  "displayName": "DBehave Language Server",
   "description": "VSCode Cucumber (Gherkin) Full Language Support + Formatting + Autocomplete",
   "homepage": "https://github.com/Synergetik/VSCucumberAutoComplete",
   "engines": {
