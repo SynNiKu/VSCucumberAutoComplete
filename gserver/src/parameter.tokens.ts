@@ -226,7 +226,7 @@ export function getParameterRanges(
                 expanded += body[i];
                 map.push([i, i + 1]);
             }
-            const step = handler.getStepByText(expanded);
+            const step = handler.getPreferredSteps(expanded)[0] || handler.getStepByText(expanded);
             if (!step) continue;
             if (!expressions.has(step)) {
                 expressions.set(step, parameterExpression(handler, step));

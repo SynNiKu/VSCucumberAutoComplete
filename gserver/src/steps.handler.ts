@@ -725,13 +725,37 @@ export default class StepsHandler {
         }
     }
 
+    getPreferredSteps(text: string): Step[] {
+        const wholeMatches = this.elements.filter((step) =>
+            new RegExp(`^(?:${step.reg.source})$`, step.reg.flags).test(text)
+        );
+        if (!wholeMatches.length) return [];
+        // Prefer definitions with more fixed text; parameter types may be unknown.
+        const score = (step: Step) => (step.parameterSource || step.text)
+            .replace(/#\{[^}]*\}|(?<!\\)\{(?![\d,])[^}]*\}/g, '')
+            .length;
+        const best = Math.max(...wholeMatches.map(score));
+        return wholeMatches.filter((step) => score(step) === best);
+    }
+
     getDefinition(line: string, text: string) {
         const match = this.getGherkinMatch(line, text);
         if (!match) {
             return null;
         }
-        const step = this.getStepByText(match[4]);
-        return step ? step.def : null;
+        const preferred = this.getPreferredSteps(match[4]);
+        if (!preferred.length) {
+            const step = this.getStepByText(match[4]);
+            return step ? step.def : null;
+        }
+        const definitions = preferred
+            .map((step) => step.def as Location)
+            .filter((location, index, all) => all.findIndex((other) =>
+                other.uri === location.uri &&
+                other.range.start.line === location.range.start.line &&
+                other.range.start.character === location.range.start.character
+            ) === index);
+        return definitions.length === 1 ? definitions[0] : definitions;
     }
 
     getStrictGherkinType(gherkinPart: string, lineNumber: number, text: string) {

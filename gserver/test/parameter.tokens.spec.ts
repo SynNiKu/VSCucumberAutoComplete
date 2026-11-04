@@ -17,6 +17,18 @@ function highlighted(handler: StepsHandler, text: string) {
 }
 
 describe('step parameter highlighting', () => {
+  it('uses the preferred whole-step definition for parameter ranges', () => {
+    const short = 'login level shall be {value:Integer}';
+    const long = 'login level shall be {value:Integer} within {timeout:Float} seconds';
+    for (const sources of [[short, long], [long, short]]) {
+      const handler = handlerFor(sources[0]);
+      handler.elements.push(...handlerFor(sources[1]).elements);
+      expect(highlighted(handler, 'Then login level shall be 2 within 3 seconds'))
+        .toEqual(['2', '3']);
+      expect(highlighted(handler, 'Then login level shall be 2')).toEqual(['2']);
+    }
+  });
+
   it('extracts Python and Cucumber expression parameters from their actual positions', () => {
     const handler = handlerFor('OCA object {object:Name} of record {record:Range} is set to {int}');
     expect(highlighted(handler, '  Given OCA object Input_Analog_Gain of record 1..4 is set to 0'))

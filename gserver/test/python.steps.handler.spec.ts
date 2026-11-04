@@ -18,6 +18,31 @@ function parseSteps(source: string, extension = 'py', settings = {}) {
   return handler;
 }
 
+describe('step definition navigation', () => {
+  it('prefers the matching definition with more literal text regardless of order', () => {
+    const short = '@step("login level shall be {value:Integer}")';
+    const long = '@step("login level shall be {value:Integer} within {timeout:Float} seconds")';
+    for (const definitions of [[short, long], [long, short]]) {
+      const handler = parseSteps(definitions.join('\n'));
+      expect(handler.getDefinition('Then login level shall be 2 within 3 seconds', ''))
+        .toEqual(handler.elements[definitions.indexOf(long)].def);
+      expect(handler.getDefinition('Then login level shall be 2', ''))
+        .toEqual(handler.elements[definitions.indexOf(short)].def);
+    }
+  });
+
+  it('returns tied definition locations and preserves partial-match fallback', () => {
+    const handler = parseSteps([
+      '@step("wait for {event:One}")',
+      '@step("wait for {event:Two}")',
+    ].join('\n'));
+    expect(handler.getDefinition('Then wait for shutdown', ''))
+      .toEqual(handler.elements.map((step) => step.def));
+    expect(handler.getDefinition('Then prefix wait for shutdown suffix', ''))
+      .toEqual(handler.elements[0].def);
+  });
+});
+
 describe('Python adjacent step literals', () => {
   const prefix = 'a signal with RMS between {outputLvlMin:SignalLevel} and '
     + '{outputLvlMax:SignalLevel} shall have been present on ';
