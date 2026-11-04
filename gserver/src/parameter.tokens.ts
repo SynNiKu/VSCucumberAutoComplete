@@ -141,7 +141,12 @@ function examples(lines: string[], start: number): Record<string, string>[] {
                 .split('|')
                 .map((cell) => cell.trim());
         const headers = parse(lines[++i] || '');
-        while (i + 1 < lines.length && /^\s*\|/.test(lines[i + 1])) {
+        while (i + 1 < lines.length) {
+            if (/^\s*(?:#.*)?$/.test(lines[i + 1])) {
+                i++;
+                continue;
+            }
+            if (!/^\s*\|/.test(lines[i + 1])) break;
             const values = parse(lines[++i]);
             rows.push(
                 Object.fromEntries(
@@ -201,8 +206,9 @@ export function getParameterRanges(
         if (placeholders.length && scenario >= 0 && !exampleRows.has(scenario)) {
             exampleRows.set(scenario, examples(lines, scenario));
         }
-        const candidates =
-            placeholders.length && scenario >= 0 ? exampleRows.get(scenario)! : [{}];
+        const rows = placeholders.length && scenario >= 0 ? exampleRows.get(scenario)! : [];
+        // Match unresolved placeholders when an outline has no usable Examples rows yet.
+        const candidates = rows.length ? rows : [{}];
         for (const row of candidates) {
             let expanded = '';
             // Map each substituted UTF-16 position back to its original feature-file range.

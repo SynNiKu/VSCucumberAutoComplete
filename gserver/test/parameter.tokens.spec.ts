@@ -17,6 +17,22 @@ function highlighted(handler: StepsHandler, text: string) {
 }
 
 describe('step parameter highlighting', () => {
+  it('highlights concrete parameters in outlines without example rows', () => {
+    const handler = handlerFor('OCA object {ocaObject:ObjectName} shall be {valueMatcher:ObjectValueMatcher}');
+    handler.elements.push(...handlerFor('OCA object {ocaObject:ObjectName} shall be {valueMatcher:ObjectValueMatcher} within {seconds:Float} seconds').elements);
+    const text = [
+      'Scenario Outline: object status',
+      ' And OCA object Input_Milan_DataPri of record <recsPre1> shall be <pre1> within 2 seconds',
+      ' And OCA object Input_Milan_DataPri of record <recsPre2> shall be <pre2>',
+      ' Examples:',
+      ' | recsPre1 | pre1 | recsPre2 | pre2 |',
+    ].join('\n');
+    expect(highlighted(handler, text)).toEqual([
+      'Input_Milan_DataPri of record ', '<recsPre1>', '<pre1>', '2',
+      'Input_Milan_DataPri of record ', '<recsPre2>', '<pre2>',
+    ]);
+  });
+
   it('uses the preferred whole-step definition for parameter ranges', () => {
     const short = 'login level shall be {value:Integer}';
     const long = 'login level shall be {value:Integer} within {timeout:Float} seconds';
@@ -53,6 +69,15 @@ describe('step parameter highlighting', () => {
     ].join('\r\n');
     expect(highlighted(handler, text)).toEqual(['<number>', '<name>', '<number>', '<name>']);
     expect(getParameterRanges(handler, text).every((range) => range.type === 'outlineParameter')).toBe(true);
+  });
+
+  it('reads example rows separated from the header and each other by comments', () => {
+    const handler = handlerFor('set {int} to {word}');
+    const text = [
+      'Scenario Outline: values', ' Given set <number> to fixed', ' Examples:',
+      ' | number |', ' # | 1 |', '', ' | 12 |', ' # another row', ' | 3 |',
+    ].join('\n');
+    expect(highlighted(handler, text)).toEqual(['<number>', 'fixed']);
   });
 
   it('separates placeholders from concrete text within matched parameters', () => {
